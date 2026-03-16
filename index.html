@@ -3970,7 +3970,7 @@
             return [...new Set(indicadores)].map(ind => ind.replace(/•/g, '').trim());
         }
 
-        function mostrarMensaje(texto, esError = false) {
+       function mostrarMensaje(texto, esError = false) {
             const mensajeAnterior = document.querySelector('.mensaje-temporal');
             if (mensajeAnterior) mensajeAnterior.remove();
             
@@ -3987,7 +3987,7 @@
                     setTimeout(() => mensaje.remove(), 300);
                 }
             }, 4000);
-        }
+        } 
 
         function configurarMembrete() {
             const uploadInput = document.getElementById('uploadEscudo');
@@ -4048,7 +4048,7 @@
                 escudoPlaceholder.style.display = 'none';
             }
         }
-
+        
         function mostrarGuiaIA() {
             const guia = 
                 "📘 **GUÍA PARA USAR EL ASISTENTE DUA**\n\n" +
@@ -5153,6 +5153,12 @@
         // ====================================================
         // FIN: NUEVAS FUNCIONES
         // ====================================================
+        // Forzar inicialización del escudo
+        if (typeof configurarMembrete === 'function') {
+            configurarMembrete();
+        } else {
+            console.log('configurarMembrete no está definida');
+        }
     </script>
 </body>
 </html>
