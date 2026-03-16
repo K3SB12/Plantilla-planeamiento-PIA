@@ -4147,6 +4147,7 @@
         function desactivarFormato() {
             if (!confirm('¿Volver al modo simple? Se perderá el formato pero se conservará el texto.')) return;
             
+            // Guardar estado de las semanas (incluyendo lo que hay en editores Quill)
             const estadoCompleto = semanas.map((semana, index) => ({
                 numSemana: index + 1,
                 eje: semana.eje,
@@ -4158,27 +4159,23 @@
                 actividades: semana.actividades,
                 evaluacion: semana.evaluacion
             }));
-
-             console.log('estadoCompleto (antes de Quill):', estadoCompleto.map(s => ({ num: s.numSemana, ind: s.indicadores })));
-
-            // 2. Guardar contenido de los editores Quill
+        
+            // Actualizar el array semanas con el contenido de los editores Quill
             editoresQuill.forEach(editor => {
-                if (semanas[editor.semana-1]) {
-                    semanas[editor.semana-1][editor.tipo] = editor.quill.root.innerHTML;
+                if (semanas[editor.semana - 1]) {
+                    semanas[editor.semana - 1][editor.tipo] = editor.quill.root.innerHTML;
                 }
             });
-
-            console.log('semanas después de Quill:', semanas.map(s => ({ num: s.id, ind: s.indicadores })));
-            
-             // 3. Eliminar editores
+        
+            // Eliminar los editores Quill
             document.querySelectorAll('.quill-wrapper').forEach(wrapper => wrapper.remove());
             editoresQuill = [];
-            
+        
             modoFormatoActivo = false;
             document.getElementById('btnActivarFormato').style.display = 'inline-flex';
             document.getElementById('btnDesactivarFormato').style.display = 'none';
-
-            // Restaurar los datos en el array semanas (por si acaso)
+        
+            // Restaurar los datos en el array semanas (por si acaso, aunque ya deberían estar)
             estadoCompleto.forEach(estado => {
                 const semana = semanas[estado.numSemana - 1];
                 semana.eje = estado.eje;
@@ -4190,88 +4187,109 @@
                 semana.actividades = estado.actividades;
                 semana.evaluacion = estado.evaluacion;
             });
-
-             console.log('semanas después de restaurar:', semanas.map(s => ({ num: s.id, ind: s.indicadores })));
         
-            // Reconstruir la vista de semanas desde el array `semanas`
-            reconstruirVistaSemanasPreservandoContenido();
-
-             // --- NUEVO: Restaurar el contenido de las columnas editables ---
-            setTimeout(() => {
-                console.log('Intentando restaurar columnas editables...');
-                semanas.forEach((semana, index) => {
-                    const numSemana = index + 1;
-                    console.log(`Semana ${numSemana}:`, { ind: semana.indicadores, act: semana.actividades, eva: semana.evaluacion });
-                    
-                    if (semana.indicadores) {
-                        const indContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="indicadores"]`);
-                        if (indContainer) {
-                            indContainer.innerHTML = semana.indicadores;
-                            console.log(`  - Indicadores restaurados en semana ${numSemana}`);
-                        } else {
-                            console.log(`  - No se encontró contenedor de indicadores en semana ${numSemana}`);
-                        }
+            // --- RECONSTRUCCIÓN MANUAL DE LAS SEMANAS ---
+            const container = document.getElementById('semanasContainer');
+            container.innerHTML = ''; // Limpiar
+        
+            // Mapeo de áreas a valores de checkboxes
+            const areaMapping = {
+                'Apropiación tecnológica y Digital': 'apropiacion',
+                'Programación y Algoritmos': 'programacion',
+                'Computación física y Robótica': 'robotica',
+                'Ciencia de datos e Inteligencia artificial': 'ciencia'
+            };
+        
+            semanas.forEach((semana, index) => {
+                const numSemana = index + 1;
+                // Extraer números de lecciones de la cadena (ej: "Lecciones 1 y 2")
+                const leccionesMatch = semana.lecciones.match(/\d+/g) || [];
+                const leccionInicio = leccionesMatch[0] ? parseInt(leccionesMatch[0]) : (index * 2 + 1);
+                const leccionFin = leccionesMatch[1] ? parseInt(leccionesMatch[1]) : (index * 2 + 2);
+        
+                // Crear elemento de la semana usando la función existente
+                const semanaElement = crearElementoSemana(numSemana, leccionInicio, leccionFin);
+                container.appendChild(semanaElement);
+        
+                // Restaurar eje transversal
+                if (semana.eje) {
+                    const radioEje = semanaElement.querySelector(`input[name="eje-semana-${numSemana}"][value="${semana.eje}"]`);
+                    if (radioEje) {
+                        radioEje.checked = true;
+                        radioEje.closest('.eje-semana-option')?.classList.add('selected');
                     }
-                    
-                    if (semana.actividades) {
-                        const actContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="Mediación"]`);
-                        if (actContainer) {
-                            actContainer.innerHTML = semana.actividades;
-                            console.log(`  - Actividades restauradas en semana ${numSemana}`);
-                        } else {
-                            console.log(`  - No se encontró contenedor de actividades en semana ${numSemana}`);
-                        }
-                    }
-                    
-                    if (semana.evaluacion) {
-                        const evalContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="evaluación"]`);
-                        if (evalContainer) {
-                            evalContainer.innerHTML = semana.evaluacion;
-                            console.log(`  - Evaluación restaurada en semana ${numSemana}`);
-                        } else {
-                            console.log(`  - No se encontró contenedor de evaluación en semana ${numSemana}`);
+                }
+        
+                // Restaurar áreas (checkboxes)
+                semana.areas.forEach(areaNombre => {
+                    const areaKey = areaMapping[areaNombre];
+                    if (areaKey) {
+                        const checkbox = semanaElement.querySelector(`input[name="area-semana-${numSemana}"][value="${areaKey}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            // Disparar el evento change para que se actualicen RdA y saberes
+                            const event = new Event('change', { bubbles: true });
+                            checkbox.dispatchEvent(event);
                         }
                     }
                 });
-            }, 500); // Aumentamos el tiempo a 500ms para asegurar que los elementos existen
+        
+                // Restaurar saberes conceptuales (necesita esperar a que se carguen los checkboxes)
+                setTimeout(() => {
+                    semana.saberes.forEach(saberNombre => {
+                        const checkboxes = semanaElement.querySelectorAll(`#saberes-conceptuales-${numSemana} input[type="checkbox"]`);
+                        checkboxes.forEach(checkbox => {
+                            const saberDiv = checkbox.closest('.saber-conceptual-item');
+                            const nombreDiv = saberDiv?.querySelector('div > div:first-child');
+                            if (nombreDiv && nombreDiv.textContent.trim().startsWith(saberNombre)) {
+                                checkbox.checked = true;
+                                saberDiv.classList.add('seleccionado');
+                            }
+                        });
+                    });
+                    // Actualizar el contenedor de saberes conceptuales (columna izquierda)
+                    actualizarSaberesConceptualesContenedor(numSemana);
+                }, 200);
+        
+                // Restaurar saberes procedimentales
+                semana.procedimentales.forEach(proc => {
+                    const checkbox = semanaElement.querySelector(`input[name="procedimental-semana-${numSemana}"][value="${proc}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+        
+                // Restaurar saberes actitudinales
+                semana.actitudinales.forEach(act => {
+                    const checkbox = semanaElement.querySelector(`input[name="actitudinal-semana-${numSemana}"][value="${act}"]`);
+                    if (checkbox) checkbox.checked = true;
+                });
+        
+                // Restaurar columnas editables (indicadores, actividades, evaluación)
+                // Los contenedores tienen la clase 'contenedor-editable' y están en orden
+                const contenedores = semanaElement.querySelectorAll('.contenedor-editable');
+                if (contenedores.length >= 1 && semana.indicadores) {
+                    contenedores[0].innerHTML = semana.indicadores;
+                }
+                if (contenedores.length >= 2 && semana.actividades) {
+                    contenedores[1].innerHTML = semana.actividades;
+                }
+                if (contenedores.length >= 3 && semana.evaluacion) {
+                    contenedores[2].innerHTML = semana.evaluacion;
+                }
+            });
+        
+            // Restaurar los ejes globales (los checkboxes superiores)
+            const ejesGlobalesSeleccionados = Array.from(document.querySelectorAll('input[name="eje"]:checked')).map(cb => cb.value);
+            setTimeout(() => {
+                ejesGlobalesSeleccionados.forEach(ejeValue => {
+                    const checkbox = document.querySelector(`input[name="eje"][value="${ejeValue}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        checkbox.closest('.eje-option')?.classList.add('selected');
+                    }
+                });
+            }, 100);
         
             mostrarMensaje('✅ Modo simple restaurado');
-        }
-        function actualizarSemanasPreservandoContenido() {
-            const nuevasLecciones = parseInt(document.getElementById('leccionesPlanificadas').value) || 8;
-            const nuevasSemanas = Math.ceil(nuevasLecciones / 2);
-            
-            if (nuevasSemanas > semanas.length) {
-                for (let i = semanas.length + 1; i <= nuevasSemanas; i++) {
-                    const leccionInicio = (i - 1) * 2 + 1;
-                    const leccionFin = Math.min(i * 2, nuevasLecciones);
-                    
-                    semanas.push({
-                        id: i,
-                        nombre: `Semana ${i}`,
-                        lecciones: `Lecciones ${leccionInicio} y ${leccionFin}`,
-                        eje: '',
-                        areas: [],
-                        rda: '',
-                        saberes: [],
-                        procedimentales: [],
-                        actitudinales: [],
-                        actividades: '',
-                        recursos: '',
-                        evaluacion: '',
-                        indicadores: ''
-                    });
-                }
-            } else if (nuevasSemanas < semanas.length) {
-                if (!confirm('¿Reducir el número de semanas? Se perderán las semanas adicionales.')) {
-                    document.getElementById('leccionesPlanificadas').value = semanas.length * 2;
-                    return;
-                }
-                semanas = semanas.slice(0, nuevasSemanas);
-            }
-            
-            reconstruirVistaSemanasPreservandoContenido();
-            actualizarContadoresSemanas();
         }
 
         // ====================================================
