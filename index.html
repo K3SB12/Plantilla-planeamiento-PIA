@@ -4187,9 +4187,31 @@
         
             // Reconstruir la vista de semanas desde el array `semanas`
             reconstruirVistaSemanasPreservandoContenido();
-        
-            mostrarMensaje('✅ Modo simple restaurado');
-        }
+
+             // --- NUEVO: Restaurar el contenido de las columnas editables ---
+            setTimeout(() => {
+                semanas.forEach((semana, index) => {
+                    const numSemana = index + 1;
+                    
+                    if (semana.indicadores) {
+                        const indContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="indicadores"]`);
+                        if (indContainer) indContainer.innerHTML = semana.indicadores;
+                    }
+                    
+                    if (semana.actividades) {
+                        const actContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="Mediación"]`);
+                        if (actContainer) actContainer.innerHTML = semana.actividades;
+                    }
+                    
+                    if (semana.evaluacion) {
+                        const evalContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="evaluación"]`);
+                        if (evalContainer) evalContainer.innerHTML = semana.evaluacion;
+                    }
+                });
+            }, 100); // Pequeño retraso para asegurar que los elementos HTML ya existen
+                
+                    mostrarMensaje('✅ Modo simple restaurado');
+                }
 
         function actualizarSemanasPreservandoContenido() {
             const nuevasLecciones = parseInt(document.getElementById('leccionesPlanificadas').value) || 8;
