@@ -2218,6 +2218,31 @@
             }
         };
 
+        // Mapa de saberes procedimentales (valor interno → etiqueta legible)
+        const PROC_MAP = {
+            'reconoce': 'Reconoce patrones',
+            'abstrae': 'Abstrae',
+            'generaliza': 'Generaliza',
+            'transfiere': 'Transfiere',
+            'modulariza': 'Modulariza',
+            'formula': 'Formula algoritmos',
+            'remezcla': 'Remezcla',
+            'depura': 'Depura',
+            'programa': 'Programa',
+            'comunica': 'Comunica',
+            'colabora': 'Colabora',
+            'piensa': 'Piensa creativamente',
+            'maneja': 'Maneja tecnologías éticamente'
+        };
+        
+        // Mapa de saberes actitudinales
+        const ACT_MAP = {
+            'gusto': 'Gusto por la precisión',
+            'aprender': 'Aprender del error',
+            'flexibilidad': 'Flexibilidad',
+            'tolerancia': 'Tolerancia a la frustración'
+        };
+
         // ====================================================
         // INICIO: VARIABLES Y FUNCIONES ORIGINALES (COMPLETAS)
         // ====================================================
@@ -3441,14 +3466,23 @@
 
             if (exportarSaberesGlobales) {
                 contenidoHTML += `
-        <div class="seccion">
-            <div class="titulo-seccion">SABERES GLOBALES</div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm;">
-                <div style="background: white; border: 1pt solid #ddd; border-radius: 2mm; padding: 3mm;"><div style="font-weight: bold; color: #45258F; margin-bottom: 2mm;">Conceptuales</div>${saberesSeleccionados.size ? Array.from(saberesSeleccionados).map(s => `• ${s}`).join('<br>') : '<em>No seleccionados</em>'}</div>
-                <div style="background: white; border: 1pt solid #ddd; border-radius: 2mm; padding: 3mm;"><div style="font-weight: bold; color: #45258F; margin-bottom: 2mm;">Procedimentales</div>${saberesProcedimentalesGlobales.size ? Array.from(saberesProcedimentalesGlobales).map(p => `• ${formatearProcedimentales(p)}`).join('<br>') : '<em>No seleccionados</em>'}</div>
-                <div style="background: white; border: 1pt solid #ddd; border-radius: 2mm; padding: 3mm;"><div style="font-weight: bold; color: #45258F; margin-bottom: 2mm;">Actitudinales</div>${saberesActitudinalesGlobales.size ? Array.from(saberesActitudinalesGlobales).map(a => `• ${a}`).join('<br>') : '<em>No seleccionados</em>'}</div>
-            </div>
-        </div>`;
+                    <div class="seccion">
+                        <div class="titulo-seccion">SABERES GLOBALES</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm;">
+                            <div style="background: white; border: 1pt solid #ddd; border-radius: 2mm; padding: 3mm;">
+                                <div style="font-weight: bold; color: #45258F; margin-bottom: 2mm;">Conceptuales</div>
+                                ${saberesSeleccionados.size ? Array.from(saberesSeleccionados).map(s => `• ${s}`).join('<br>') : '<em>No seleccionados</em>'}
+                            </div>
+                            <div style="background: white; border: 1pt solid #ddd; border-radius: 2mm; padding: 3mm;">
+                                <div style="font-weight: bold; color: #45258F; margin-bottom: 2mm;">Procedimentales</div>
+                                ${saberesProcedimentalesGlobales.size ? Array.from(saberesProcedimentalesGlobales).map(p => `• ${PROC_MAP[p] || p.charAt(0).toUpperCase() + p.slice(1)}`).join('<br>') : '<em>No seleccionados</em>'}
+                            </div>
+                            <div style="background: white; border: 1pt solid #ddd; border-radius: 2mm; padding: 3mm;">
+                                <div style="font-weight: bold; color: #45258F; margin-bottom: 2mm;">Actitudinales</div>
+                                ${saberesActitudinalesGlobales.size ? Array.from(saberesActitudinalesGlobales).map(a => `• ${ACT_MAP[a] || a.charAt(0).toUpperCase() + a.slice(1)}`).join('<br>') : '<em>No seleccionados</em>'}
+                            </div>
+                        </div>
+                    </div>`;
             }
 
             if (exportarSemanas && semanas.length > 0) {
@@ -4130,110 +4164,30 @@
                     semanas[editor.semana-1][editor.tipo] = editor.quill.root.innerHTML;
                 }
             });
+
+            document.querySelectorAll('.quill-wrapper').forEach(wrapper => wrapper.remove());
+            editoresQuill = [];
             
             modoFormatoActivo = false;
             document.getElementById('btnActivarFormato').style.display = 'inline-flex';
             document.getElementById('btnDesactivarFormato').style.display = 'none';
-            
-            document.querySelectorAll('.quill-wrapper').forEach(wrapper => wrapper.remove());
-            editoresQuill = [];
-            
-            const container = document.getElementById('semanasContainer');
-            container.innerHTML = '';
-            
-            semanas.forEach((semana, index) => {
-                const lecciones = semana.lecciones.match(/\d+/g) || [];
-                const leccionInicio = lecciones[0] ? parseInt(lecciones[0]) : (index * 2 + 1);
-                const leccionFin = lecciones[1] ? parseInt(lecciones[1]) : Math.min((index + 1) * 2, parseInt(document.getElementById('leccionesPlanificadas').value));
-                
-                const semanaElement = crearElementoSemana(index + 1, leccionInicio, leccionFin);
-                container.appendChild(semanaElement);
+
+            // Restaurar los datos en el array semanas (por si acaso)
+            estadoCompleto.forEach(estado => {
+                const semana = semanas[estado.numSemana - 1];
+                semana.eje = estado.eje;
+                semana.areas = estado.areas;
+                semana.saberes = estado.saberes;
+                semana.procedimentales = estado.procedimentales;
+                semana.actitudinales = estado.actitudinales;
+                semana.indicadores = estado.indicadores;
+                semana.actividades = estado.actividades;
+                semana.evaluacion = estado.evaluacion;
             });
-            
-            setTimeout(() => {
-                estadoCompleto.forEach((estado) => {
-                    const numSemana = estado.numSemana;
-                    const semanaData = semanas[numSemana - 1];
-                    
-                    semanaData.eje = estado.eje;
-                    semanaData.areas = estado.areas;
-                    semanaData.saberes = estado.saberes;
-                    semanaData.procedimentales = estado.procedimentales;
-                    semanaData.actitudinales = estado.actitudinales;
-                    semanaData.indicadores = estado.indicadores;
-                    semanaData.actividades = estado.actividades;
-                    semanaData.evaluacion = estado.evaluacion;
-                    
-                    if (estado.eje) {
-                        const radioEje = document.querySelector(`input[name="eje-semana-${numSemana}"][value="${estado.eje}"]`);
-                        if (radioEje) {
-                            radioEje.checked = true;
-                            radioEje.closest('.eje-semana-option')?.classList.add('selected');
-                        }
-                    }
-                    
-                    const areaMapping = {
-                        'Apropiación tecnológica y Digital': 'apropiacion',
-                        'Programación y Algoritmos': 'programacion',
-                        'Computación física y Robótica': 'robotica',
-                        'Ciencia de datos e Inteligencia artificial': 'ciencia'
-                    };
-                    
-                    estado.areas.forEach(areaNombre => {
-                        const areaKey = areaMapping[areaNombre];
-                        if (areaKey) {
-                            const checkbox = document.querySelector(`input[name="area-semana-${numSemana}"][value="${areaKey}"]`);
-                            if (checkbox) {
-                                checkbox.checked = true;
-                            }
-                        }
-                    });
-                    
-                    actualizarRdASemana(numSemana);
-                    actualizarOpcionesSaberesSemana(numSemana);
-                    
-                    setTimeout(() => {
-                        estado.saberes.forEach(saberNombre => {
-                            const checkboxes = document.querySelectorAll(`#saberes-conceptuales-${numSemana} input[type="checkbox"]`);
-                            checkboxes.forEach(checkbox => {
-                                const saberDiv = checkbox.closest('.saber-conceptual-item');
-                                const nombreDiv = saberDiv?.querySelector('div > div:first-child');
-                                if (nombreDiv && nombreDiv.textContent.trim().startsWith(saberNombre)) {
-                                    checkbox.checked = true;
-                                    saberDiv.classList.add('seleccionado');
-                                }
-                            });
-                        });
-                        actualizarSaberesConceptualesContenedor(numSemana);
-                    }, 300);
-                    
-                    estado.procedimentales.forEach(proc => {
-                        const checkbox = document.querySelector(`input[name="procedimental-semana-${numSemana}"][value="${proc}"]`);
-                        if (checkbox) checkbox.checked = true;
-                    });
-                    
-                    estado.actitudinales.forEach(act => {
-                        const checkbox = document.querySelector(`input[name="actitudinal-semana-${numSemana}"][value="${act}"]`);
-                        if (checkbox) checkbox.checked = true;
-                    });
-                    
-                    if (estado.indicadores) {
-                        const indContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="indicadores"]`);
-                        if (indContainer) indContainer.innerHTML = estado.indicadores;
-                    }
-                    
-                    if (estado.actividades) {
-                        const actContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="Mediación"]`);
-                        if (actContainer) actContainer.innerHTML = estado.actividades;
-                    }
-                    
-                    if (estado.evaluacion) {
-                        const evalContainer = document.querySelector(`#semana-${numSemana} .contenedor-editable[data-placeholder*="evaluación"]`);
-                        if (evalContainer) evalContainer.innerHTML = estado.evaluacion;
-                    }
-                });
-            }, 100);
-            
+        
+            // Reconstruir la vista de semanas desde el array `semanas`
+            reconstruirVistaSemanasPreservandoContenido();
+        
             mostrarMensaje('✅ Modo simple restaurado');
         }
 
